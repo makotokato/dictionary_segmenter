@@ -122,14 +122,12 @@ impl BytesTrie<'_> {
     // Traverses the trie from the initial state for this input char.
     // Equivalent to reset() then next(inUnit)
     pub fn first(&mut self, in_unit: u8) -> BytesTrieResult {
-        println!("first: in_unit={:x}", in_unit);
         self.remaining_match_length_ = None;
         self.next_impl(self.root_, in_unit)
     }
 
     // Traverses the trie from the current state for this input char.
     pub fn next(&mut self, in_unit: u8) -> BytesTrieResult {
-        println!("next: in_unit={:x}", in_unit);
         if self.pos_.is_none() {
             return BytesTrieResult::NoMatch;
         }
@@ -160,22 +158,11 @@ impl BytesTrie<'_> {
     }
 
     fn branch_next(&mut self, pos: usize, length: usize, in_unit: u8) -> BytesTrieResult {
-        println!(
-            "branch_next: pos={} length={}, inbytes={:x}",
-            pos - self.root_,
-            length,
-            in_unit
-        );
         let mut pos = pos;
         let mut length = length;
         if length == 0 {
             length = self.bytes_[pos] as usize;
             pos += 1;
-            println!(
-                "branch_next: new len={}, new pos={}",
-                length,
-                pos - self.root_
-            );
         }
         length += 1;
 
@@ -190,7 +177,6 @@ impl BytesTrie<'_> {
                 pos = self.skip_delta(pos + 1);
             }
         }
-        println!("branch_next: new pos={}", pos - self.root_);
         // Drop down to linear search for the last few bytes.
         // length>=2 because the loop body above sees length>kMaxBranchLinearSubNodeLength>=3
         // and divides length by 2.
@@ -233,7 +219,6 @@ impl BytesTrie<'_> {
                 }
                 node = self.bytes_[pos];
                 self.pos_ = Some(pos);
-                println!("branch_next: fianl pos={}", pos - self.root_);
 
                 if node >= MIN_VALUE_LEAD {
                     return BytesTrie::value_result(node);
@@ -262,7 +247,6 @@ impl BytesTrie<'_> {
     }
 
     fn next_impl(&mut self, pos: usize, in_unit: u8) -> BytesTrieResult {
-        println!("next_impl: pos={}, in_unit={:x}", pos - self.root_, in_unit);
         let mut pos = pos;
         loop {
             let mut node = self.bytes_[pos];
