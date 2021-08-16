@@ -153,9 +153,10 @@ impl BytesTrie<'_> {
             }
             self.stop();
             // no match
-            return BytesTrieResult::NoMatch;
+            BytesTrieResult::NoMatch
+        } else {
+            self.next_impl(pos, in_unit)
         }
-        self.next_impl(pos, in_unit)
     }
 
     fn branch_next(&mut self, pos: usize, length: usize, in_unit: u8) -> BytesTrieResult {
@@ -253,10 +254,11 @@ impl BytesTrie<'_> {
             if node >= MIN_VALUE_LEAD {
                 return BytesTrie::value_result(node);
             }
-            return BytesTrieResult::NoValue;
+            BytesTrieResult::NoValue
+        } else {
+            self.stop();
+            BytesTrieResult::NoMatch
         }
-        self.stop();
-        return BytesTrieResult::NoMatch;
     }
 
     fn next_impl(&mut self, pos: usize, in_unit: u8) -> BytesTrieResult {
@@ -271,8 +273,8 @@ impl BytesTrie<'_> {
                 // Match the first of length+1 units.
                 let length = node - MIN_LINEAR_MATCH;
                 if in_unit == self.bytes_[pos] {
+                    pos += 1;
                     if length == 0 {
-                        pos += 1;
                         self.remaining_match_length_ = None;
                         self.pos_ = Some(pos);
                         node = self.bytes_[pos];
@@ -282,7 +284,7 @@ impl BytesTrie<'_> {
                         return BytesTrieResult::NoValue;
                     }
                     self.remaining_match_length_ = Some(length as usize - 1);
-                    self.pos_ = Some(pos + 1);
+                    self.pos_ = Some(pos);
                     return BytesTrieResult::NoValue;
                 }
                 // No match
