@@ -30,12 +30,6 @@ const MAX_THREE_BYTE_VALUE: u32 =
 
 const FIVE_BYTE_VALUE_LEAD: u8 = 0x7f;
 
-// A little more than Unicode code points. (0x11ffff)
-/*
-/*package*/ static final int kMinThreeByteValueLead=kMinTwoByteValueLead+(kMaxTwoByteValue>>8)+1;  // 0x6c
-/*package*/ static final int kFourByteValueLead=0x7e;
-*/
-
 // Compact delta integers.
 const MAX_ONE_BYTE_DELTA: u8 = 0xbf;
 const MIN_TWO_BYTE_DELTA_LEAD: u8 = MAX_ONE_BYTE_DELTA + 1; // 0xc0
@@ -73,6 +67,10 @@ pub enum BytesTrieResult {
     // but there is no value for the string so far.
     // (It is a prefix of a longer string.)
     NoValue,
+    // The input unit(s) continued a matching string
+    // and there is a value for the string so far.
+    // This value will be returned by getValue().
+    // No further input byte/unit can continue a matching string.
     FinalValue,
     // The input unit(s) continued a matching string
     // and there is a value for the string so far.
@@ -81,25 +79,25 @@ pub enum BytesTrieResult {
     Intermediate,
 }
 
-const DATA: &[u8; 445542] = include_bytes!("../data/khmerdict.dict");
-
+#[derive(Clone)]
 pub struct BytesTrie<'a> {
-    bytes_: &'a [u8; 445542],
+    bytes_: &'a [u8],
     pos_: Option<usize>,
     root_: usize,
     remaining_match_length_: Option<usize>,
 }
 
-impl BytesTrie<'_> {
-    pub fn new(trie: &[u8], offset: usize) -> Self {
+impl<'a> BytesTrie<'a> {
+    pub fn new(trie: &'a [u8], offset: usize) -> Self {
         Self {
-            bytes_: DATA,
-            pos_: Some(/*offset*/ 0xb0),
-            root_: 0xb0, /*offset*/
+            bytes_: trie,
+            pos_: Some(offset),
+            root_: offset,
             remaining_match_length_: None,
         }
     }
 
+/*
     pub fn reset(&mut self) {
         self.pos_ = Some(self.root_);
         self.remaining_match_length_ = None;
@@ -118,6 +116,7 @@ impl BytesTrie<'_> {
 
         BytesTrieResult::NoValue
     }
+*/
 
     // Traverses the trie from the initial state for this input char.
     // Equivalent to reset() then next(inUnit)
