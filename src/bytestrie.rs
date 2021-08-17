@@ -97,44 +97,23 @@ impl<'a> BytesTrie<'a> {
         }
     }
 
-/*
-    pub fn reset(&mut self) {
-        self.pos_ = Some(self.root_);
-        self.remaining_match_length_ = None;
-    }
-
-    pub fn current(&self) -> BytesTrieResult {
-        if self.pos_.is_none() {
-            return BytesTrieResult::NoMatch;
-        }
-
-        let pos = self.pos_.unwrap();
-        let node = self.bytes_[pos];
-        if self.remaining_match_length_.is_none() && node >= MIN_VALUE_LEAD {
-            return BytesTrie::value_result(node);
-        }
-
-        BytesTrieResult::NoValue
-    }
-*/
-
     // Traverses the trie from the initial state for this input char.
     // Equivalent to reset() then next(inUnit)
-    pub fn first(&mut self, in_unit: u8) -> BytesTrieResult {
+    pub fn first(&mut self, in_byte: i32) -> BytesTrieResult {
         self.remaining_match_length_ = None;
-        self.next_impl(self.root_, in_unit)
+        self.next_impl(self.root_, in_byte as u8)
     }
 
     // Traverses the trie from the current state for this input char.
-    pub fn next(&mut self, in_unit: u8) -> BytesTrieResult {
+    pub fn next(&mut self, in_byte: i32) -> BytesTrieResult {
+        let mut in_byte = in_byte as u8;
         if self.pos_.is_none() {
             return BytesTrieResult::NoMatch;
         }
-
         let mut pos = self.pos_.unwrap();
         if let Some(length) = self.remaining_match_length_ {
             // Remaining part of a linear-match node
-            if in_unit == self.bytes_[pos] {
+            if in_byte == self.bytes_[pos] {
                 pos += 1;
                 self.pos_ = Some(pos);
                 if length == 0 {
@@ -152,7 +131,7 @@ impl<'a> BytesTrie<'a> {
             // no match
             BytesTrieResult::NoMatch
         } else {
-            self.next_impl(pos, in_unit)
+            self.next_impl(pos, in_byte)
         }
     }
 

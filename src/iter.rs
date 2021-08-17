@@ -49,10 +49,10 @@ impl<'a> Iterator for DictionaryIterator<'a> {
             let result = match i {
                 0 => self
                     .trie
-                    .first(self.transform(self.iter[i + self.front_offset]) as u8),
+                    .first(self.transform(self.iter[i + self.front_offset])),
                 _ => self
                     .trie
-                    .next(self.transform(self.iter[i + self.front_offset]) as u8),
+                    .next(self.transform(self.iter[i + self.front_offset])),
             };
             if result == BytesTrieResult::FinalValue {
                 self.front_offset += i + 1;
@@ -91,25 +91,28 @@ impl<'a> DictionaryIterator<'a> {
                 front_offset: 0,
                 transform: header.transform,
             },
-            _ => panic!("not supported"),
+            TRIE_TYPE_UCHARS => panic!("not supported"),
+            _ => panic!("unknown type"),
         }
     }
 
     fn transform(&self, c: u16) -> i32 {
         if self.transform & TRANSFORM_TYPE_MASK != 0 {
-            if c == 0x200c {
-                return 0xfe;
+            match c {
+                0x200c => 0xfe,
+                0x200d => 0xff,
+                _ => {
+                    let delta = (c as u32 - (self.transform & TRANSFORM_OFFSET_MASK)) as i32;
+                    if delta < 0 || delta > 0xfd {
+                        -1
+                    } else {
+                        delta
+                    }
+                }
             }
-            if c == 0x200d {
-                return 0xff;
-            }
-            let delta: i32 = (c as u32 - (self.transform & TRANSFORM_OFFSET_MASK)) as i32;
-            if delta < 0 || delta > 0xfd {
-                return -1;
-            }
-            return delta;
+        } else {
+            c as i32
         }
-        c as i32
     }
 }
 
