@@ -1,4 +1,5 @@
 use crate::bytestrie::*;
+use crate::trie::*;
 use std::mem;
 
 const TRIE_TYPE_BYTES: u32 = 0;
@@ -54,15 +55,15 @@ impl<'a> Iterator for DictionaryIterator<'a> {
                     .trie
                     .next(self.transform(self.iter[i + self.front_offset])),
             };
-            if result == BytesTrieResult::FinalValue {
+            if result == TrieResult::FinalValue {
                 self.front_offset += i + 1;
                 return Some(self.front_offset);
             }
-            if result == BytesTrieResult::Intermediate {
+            if result == TrieResult::Intermediate {
                 intermediate_length = i + 1;
                 // continue for better string
             }
-            if result == BytesTrieResult::NoMatch {
+            if result == TrieResult::NoMatch {
                 break;
             }
             i += 1;

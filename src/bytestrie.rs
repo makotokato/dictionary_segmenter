@@ -1,3 +1,5 @@
+use crate::trie::*;
+
 // 00..0f: Branch node. If node!=0 then the length is node+1, otherwise
 // the length is one more than the next byte.
 
@@ -56,29 +58,6 @@ fn skip_value(pos: usize, lead_byte: u8) -> usize {
     }
 }
 
-#[derive(Clone, Copy, PartialEq)]
-pub enum BytesTrieResult {
-    // The input unit(s) did not continue a matching string.
-    // Once current()/next() return USTRINGTRIE_NO_MATCH,
-    // all further calls to current()/next() will also return USTRINGTRIE_NO_MATCH,
-    // until the trie is reset to its original state or to a saved state.
-    NoMatch,
-    // The input unit(s) continued a matching string
-    // but there is no value for the string so far.
-    // (It is a prefix of a longer string.)
-    NoValue,
-    // The input unit(s) continued a matching string
-    // and there is a value for the string so far.
-    // This value will be returned by getValue().
-    // No further input byte/unit can continue a matching string.
-    FinalValue,
-    // The input unit(s) continued a matching string
-    // and there is a value for the string so far.
-    // This value will be returned by getValue().
-    // Another input byte/unit can continue a matching string.
-    Intermediate,
-}
-
 #[derive(Clone)]
 pub struct BytesTrie<'a> {
     bytes_: &'a [u8],
@@ -99,16 +78,16 @@ impl<'a> BytesTrie<'a> {
 
     // Traverses the trie from the initial state for this input char.
     // Equivalent to reset() then next(inUnit)
-    pub fn first(&mut self, in_byte: i32) -> BytesTrieResult {
+    pub fn first(&mut self, in_byte: i32) -> TrieResult {
         self.remaining_match_length_ = None;
         self.next_impl(self.root_, in_byte as u8)
     }
 
     // Traverses the trie from the current state for this input char.
-    pub fn next(&mut self, in_byte: i32) -> BytesTrieResult {
+    pub fn next(&mut self, in_byte: i32) -> TrieResult {
         let mut in_byte = in_byte as u8;
         if self.pos_.is_none() {
-            return BytesTrieResult::NoMatch;
+            return TrieResult::NoMatch;
         }
         let mut pos = self.pos_.unwrap();
         if let Some(length) = self.remaining_match_length_ {
@@ -125,17 +104,17 @@ impl<'a> BytesTrie<'a> {
                 } else {
                     self.remaining_match_length_ = Some(length);
                 }
-                return BytesTrieResult::NoValue;
+                return TrieResult::NoValue;
             }
             self.stop();
             // no match
-            BytesTrieResult::NoMatch
+            TrieResult::NoMatch
         } else {
             self.next_impl(pos, in_byte)
         }
     }
 
-    fn branch_next(&mut self, pos: usize, length: usize, in_unit: u8) -> BytesTrieResult {
+    fn branch_next(&mut self, pos: usize, length: usize, in_unit: u8) -> TrieResult {
         let mut pos = pos;
         let mut length = length;
         if length == 0 {
@@ -166,7 +145,7 @@ impl<'a> BytesTrie<'a> {
                 if node & VALUE_IS_FINAL != 0 {
                     // Leave the final value for getValue() to read.
                     self.pos_ = Some(pos);
-                    return BytesTrieResult::FinalValue;
+                    return TrieResult::FinalValue;
                 }
                 // Use the non-final value as the jump delta.
                 pos += 1;
@@ -201,7 +180,7 @@ impl<'a> BytesTrie<'a> {
                 if node >= MIN_VALUE_LEAD {
                     return BytesTrie::value_result(node);
                 }
-                return BytesTrieResult::NoValue;
+                return TrieResult::NoValue;
             }
             length -= 1;
             pos = self.skip_value(pos + 1);
@@ -217,14 +196,14 @@ impl<'a> BytesTrie<'a> {
             if node >= MIN_VALUE_LEAD {
                 return BytesTrie::value_result(node);
             }
-            BytesTrieResult::NoValue
+            TrieResult::NoValue
         } else {
             self.stop();
-            BytesTrieResult::NoMatch
+            TrieResult::NoMatch
         }
     }
 
-    fn next_impl(&mut self, pos: usize, in_unit: u8) -> BytesTrieResult {
+    fn next_impl(&mut self, pos: usize, in_unit: u8) -> TrieResult {
         let mut pos = pos;
         loop {
             let mut node = self.bytes_[pos];
@@ -243,11 +222,11 @@ impl<'a> BytesTrie<'a> {
                         if node >= MIN_VALUE_LEAD {
                             return BytesTrie::value_result(node);
                         }
-                        return BytesTrieResult::NoValue;
+                        return TrieResult::NoValue;
                     }
                     self.remaining_match_length_ = Some(length as usize - 1);
                     self.pos_ = Some(pos);
-                    return BytesTrieResult::NoValue;
+                    return TrieResult::NoValue;
                 }
                 // No match
                 break;
@@ -261,7 +240,7 @@ impl<'a> BytesTrie<'a> {
             }
         }
         self.stop();
-        BytesTrieResult::NoMatch
+        TrieResult::NoMatch
     }
 
     fn stop(&mut self) {
@@ -316,11 +295,11 @@ impl<'a> BytesTrie<'a> {
         }
     }
 
-    fn value_result(node: u8) -> BytesTrieResult {
+    fn value_result(node: u8) -> TrieResult {
         let node = node & VALUE_IS_FINAL;
         match node {
-            VALUE_IS_FINAL => BytesTrieResult::FinalValue,
-            _ => BytesTrieResult::Intermediate,
+            VALUE_IS_FINAL => TrieResult::FinalValue,
+            _ => TrieResult::Intermediate,
         }
     }
 }
