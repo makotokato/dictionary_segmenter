@@ -108,7 +108,7 @@ impl<'a> DictionaryIterator<'a> {
     }
 
     fn transform(&self, c: u16) -> i32 {
-        if self.transform & TRANSFORM_TYPE_MASK != 0 {
+        if self.transform & TRANSFORM_TYPE_MASK == TRANSFORM_TYPE_OFFSET {
             match c {
                 0x200c => 0xfe,
                 0x200d => 0xff,
