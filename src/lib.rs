@@ -1,6 +1,6 @@
-mod bytestrie;
-mod dictionary_iter;
+mod bytes_trie;
+mod dictionary_iterator;
 mod trie;
-mod ucharstrie;
+mod uchars_trie;
 
-pub use crate::dictionary_iter::DictionaryIterator;
+pub use crate::dictionary_iterator::DictionaryIterator;

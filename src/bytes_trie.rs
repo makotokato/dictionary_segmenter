@@ -126,7 +126,7 @@ impl BytesTrie {
         trie_data: &[u8],
         pos: usize,
         length: usize,
-        in_unit: u8,
+        in_byte: u8,
     ) -> TrieResult {
         let mut pos = pos;
         let mut length = length;
@@ -139,7 +139,7 @@ impl BytesTrie {
         // The length of the branch is the number of units to select from.
         // The data structure encodes a binary search.
         while length > MAX_BRANCH_LINEAR_SUB_NODE_LENGTH {
-            if in_unit < trie_data[pos] {
+            if in_byte < trie_data[pos] {
                 length >>= 1;
                 pos = self.jump_by_delta(trie_data, pos + 1);
             } else {
@@ -151,7 +151,7 @@ impl BytesTrie {
         // length>=2 because the loop body above sees length>kMaxBranchLinearSubNodeLength>=3
         // and divides length by 2.
         loop {
-            if in_unit == trie_data[pos] {
+            if in_byte == trie_data[pos] {
                 pos += 1;
                 let mut node = trie_data[pos];
                 assert!(node >= MIN_VALUE_LEAD);
@@ -202,7 +202,7 @@ impl BytesTrie {
             }
         }
 
-        if in_unit == trie_data[pos] {
+        if in_byte == trie_data[pos] {
             pos += 1;
             self.pos_ = Some(pos);
             let node = trie_data[pos];
@@ -216,17 +216,17 @@ impl BytesTrie {
         }
     }
 
-    fn next_impl(&mut self, trie_data: &[u8], pos: usize, in_unit: u8) -> TrieResult {
+    fn next_impl(&mut self, trie_data: &[u8], pos: usize, in_byte: u8) -> TrieResult {
         let mut pos = pos;
         loop {
             let mut node = trie_data[pos];
             pos += 1;
             if node < MIN_LINEAR_MATCH {
-                return self.branch_next(trie_data, pos, node as usize, in_unit);
+                return self.branch_next(trie_data, pos, node as usize, in_byte);
             } else if node < MIN_VALUE_LEAD {
                 // Match the first of length+1 units.
                 let length = node - MIN_LINEAR_MATCH;
-                if in_unit == trie_data[pos] {
+                if in_byte == trie_data[pos] {
                     pos += 1;
                     if length == 0 {
                         self.remaining_match_length_ = None;

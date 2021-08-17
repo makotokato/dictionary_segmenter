@@ -1,6 +1,6 @@
-use crate::bytestrie::*;
+use crate::bytes_trie::*;
 use crate::trie::*;
-use crate::ucharstrie::*;
+use crate::uchars_trie::*;
 
 const TRIE_TYPE_BYTES: u32 = 0;
 const TRIE_TYPE_UCHARS: u32 = 1;
@@ -129,7 +129,7 @@ impl<'a> DictionaryIterator<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::dictionary_iter::*;
+    use crate::dictionary_iterator::*;
     const KHMER_DATA: &[u8; 445542] = include_bytes!("../data/khmerdict.dict");
     const LAO_DATA: &[u8; 162620] = include_bytes!("../data/laodict.dict");
     const CJ_DATA: &[u8; 2003566] = include_bytes!("../data/cjdict.dict");
