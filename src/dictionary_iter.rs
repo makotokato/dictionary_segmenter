@@ -129,13 +129,13 @@ impl<'a> DictionaryIterator<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::iter::*;
+    use crate::dictionary_iter::*;
     const KHMER_DATA: &[u8; 445542] = include_bytes!("../data/khmerdict.dict");
     const LAO_DATA: &[u8; 162620] = include_bytes!("../data/laodict.dict");
     const CJ_DATA: &[u8; 2003566] = include_bytes!("../data/cjdict.dict");
 
     #[test]
-    fn iter_bytes_test() {
+    fn trie_iter_test() {
         const KM_STR: [u16; 27] = [
             0x1797, 0x17b6, 0x179f, 0x17b6, 0x1781, 0x17d2, 0x1798, 0x17c2, 0x179a, 0x1797, 0x17b6,
             0x179f, 0x17b6, 0x1781, 0x17d2, 0x1798, 0x17c2, 0x179a, 0x1797, 0x17b6, 0x179f, 0x17b6,

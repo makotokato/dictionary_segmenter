@@ -26,11 +26,6 @@ const MAX_ONE_UNIT_VALUE: u16 = 0x3fff;
 const MIN_TWO_UNIT_VALUE_LEAD: u16 = MAX_ONE_UNIT_VALUE + 1; // 0x4000
 const THREE_UNIT_VALUE_LEAD: u16 = 0x7fff;
 
-// Compact intermediate-value integer, lead unit shared with a branch or linear-match node.
-const MAX_ONE_UNIT_NODE_VALUE: u16 = 0xff;
-const MIN_TWO_UNIT_NODE_VALUE_LEAD: u16 = MIN_VALUE_LEAD + ((MAX_ONE_UNIT_NODE_VALUE + 1) << 6); // 0x4040
-const THREE_UNIT_NODE_VALUE_LEAD: u16 = 0x7fc0;
-
 // Compact delta integers.
 const MAX_ONE_UNIT_DELTA: u16 = 0xfbff;
 const MIN_TWO_UNIT_DELTA_LEAD: u16 = MAX_ONE_UNIT_DELTA + 1; // 0xfc00
