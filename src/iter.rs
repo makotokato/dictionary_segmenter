@@ -25,7 +25,7 @@ struct TrieHeader {
 
 #[derive(Clone)]
 pub struct DictionaryIterator<'a> {
-    trie: Box<BytesTrie>,
+    trie: Box<dyn Trie>,
     iter: &'a [u16],
     front_offset: usize,
     transform: u32,
@@ -96,7 +96,13 @@ impl<'a> DictionaryIterator<'a> {
                 transform: header.transform,
                 dictionary: dictionary,
             },
-            TRIE_TYPE_UCHARS => panic!("not supported"),
+            TRIE_TYPE_UCHARS => Self {
+                trie: Box::new(UCharsTrie::new(0x90 + header.trie_offset as usize)),
+                iter: input,
+                front_offset: 0,
+                transform: header.transform,
+                dictionary: dictionary,
+            },
             _ => panic!("unknown type"),
         }
     }
@@ -151,15 +157,11 @@ mod tests {
         assert_eq!(iterator.next(), Some(14));
         assert_eq!(iterator.next(), Some(18));
         assert_eq!(iterator.next(), Some(21));
-    }
 
-    #[test]
-    fn iter_uchar_test() {
-        const J_STR: [u16; 21] = [
-            0x0e9e, 0x0eb2, 0x0eaa, 0x0eb2, 0x0ea5, 0x0eb2, 0x0ea7, 0x0e9e, 0x0eb2, 0x0eaa, 0x0eb2,
-            0x0ea5, 0x0eb2, 0x0ea7, 0x0e9e, 0x0eb2, 0x0eaa, 0x0eb2, 0x0ea5, 0x0eb2, 0x0ea7,
+        const J_STR: [u16; 8] = [
+            0x713c, 0x8089, 0x5b9a, 0x98df, 0x3092, 0x98df, 0x3079, 0x308b,
         ];
-        UCharsTrie::new(unsafe { *(CJ_DATA.as_ptr() as *const &[u16]) }, 0x90 + 0x20);
-        //let mut iterator = DictionaryIterator::new(CJ_DATA, &J_STR);
+        let mut iterator = DictionaryIterator::new(CJ_DATA, &J_STR);
+        assert_eq!(iterator.next(), Some(4));
     }
 }

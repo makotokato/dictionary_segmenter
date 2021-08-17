@@ -108,6 +108,14 @@ impl Trie for BytesTrie {
             self.next_impl(trie_data, pos, in_byte)
         }
     }
+
+    fn box_clone(&self) -> Box<dyn Trie> {
+        Box::new(BytesTrie {
+            pos_: self.pos_,
+            root_: self.root_,
+            remaining_match_length_: self.remaining_match_length_,
+        })
+    }
 }
 
 impl BytesTrie {

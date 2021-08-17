@@ -24,4 +24,11 @@ pub enum TrieResult {
 pub trait Trie {
     fn first(&mut self, trie_data: &[u8], in_unut: i32) -> TrieResult;
     fn next(&mut self, trie_data: &[u8], in_unut: i32) -> TrieResult;
+    fn box_clone(&self) -> Box<dyn Trie>;
+}
+
+impl Clone for Box<Trie> {
+    fn clone(&self) -> Box<dyn Trie> {
+      self.box_clone()
+    }
 }

@@ -57,6 +57,7 @@ impl Trie for UCharsTrie {
     // Traverses the trie from the initial state for this input char.
     // Equivalent to reset() then next(inUnit)
     fn first(&mut self, trie_data: &[u8], c: i32) -> TrieResult {
+        println!("first: {}", self.pos_.unwrap() - self.root_);
         let uchars = unsafe { &*(trie_data as *const [u8] as *const [u16]) };
         self.remaining_match_length_ = None;
         self.next_impl(uchars, self.root_, c as u16)
@@ -64,6 +65,7 @@ impl Trie for UCharsTrie {
 
     // Traverses the trie from the current state for this input char.
     fn next(&mut self, trie_data: &[u8], c: i32) -> TrieResult {
+        println!("next: {}", self.pos_.unwrap() - self.root_);
         let uchars = unsafe { &*(trie_data as *const [u8] as *const [u16]) };
         if self.pos_.is_none() {
             return TrieResult::NoMatch;
@@ -92,10 +94,18 @@ impl Trie for UCharsTrie {
             self.next_impl(uchars, pos, in_byte)
         }
     }
+
+    fn box_clone(&self) -> Box<dyn Trie> {
+        Box::new(UCharsTrie {
+            pos_: self.pos_,
+            root_: self.root_,
+            remaining_match_length_: self.remaining_match_length_,
+        })
+    }
 }
 
 impl UCharsTrie {
-    pub fn new(trie: &[u16], offset: usize) -> Self {
+    pub fn new(offset: usize) -> Self {
         Self {
             pos_: Some(offset / 2),
             root_: offset / 2,
@@ -110,6 +120,7 @@ impl UCharsTrie {
         length: usize,
         in_unit: u16,
     ) -> TrieResult {
+        println!("branch_next: pos={}, length={}, in_unit={:x}", pos - self.root_, length, in_unit);
         let mut pos = pos;
         let mut length = length;
         if length == 0 {
@@ -129,6 +140,7 @@ impl UCharsTrie {
                 pos = self.skip_delta(uchars, pos + 1);
             }
         }
+        println!("branch_next: new pos={}, new length={}", pos - self.root_, length);
         // Drop down to linear search for the last few bytes.
         // length>=2 because the loop body above sees length>kMaxBranchLinearSubNodeLength>=3
         // and divides length by 2.
@@ -136,7 +148,6 @@ impl UCharsTrie {
             if in_unit == uchars[pos] {
                 pos += 1;
                 let mut node = uchars[pos];
-                assert!(node >= MIN_VALUE_LEAD);
                 if node & VALUE_IS_FINAL != 0 {
                     // Leave the final value for getValue() to read.
                     self.pos_ = Some(pos);
@@ -145,7 +156,6 @@ impl UCharsTrie {
                 // Use the non-final value as the jump delta.
                 pos += 1;
 
-                node >>= 1;
                 if node < MIN_TWO_UNIT_VALUE_LEAD {
                     pos += node as usize;
                 } else if node < THREE_UNIT_VALUE_LEAD {
@@ -186,10 +196,10 @@ impl UCharsTrie {
     }
 
     fn next_impl(&mut self, uchars: &[u16], pos: usize, in_unit: u16) -> TrieResult {
-        let mut pos = pos;
+        println!("next_impl: pos={}", pos - self.root_);
+        let mut node = uchars[pos];
+        let mut pos = pos + 1;
         loop {
-            let mut node = uchars[pos];
-            pos += 1;
             if node < MIN_LINEAR_MATCH {
                 return self.branch_next(uchars, pos, node as usize, in_unit);
             } else if node < MIN_VALUE_LEAD {
