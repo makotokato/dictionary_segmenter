@@ -1,5 +1,6 @@
 use crate::bytestrie::*;
 use crate::trie::*;
+use crate::ucharstrie::*;
 use std::mem;
 
 const TRIE_TYPE_BYTES: u32 = 0;
@@ -120,10 +121,12 @@ impl<'a> DictionaryIterator<'a> {
 #[cfg(test)]
 mod tests {
     use crate::iter::*;
+    const KHMER_DATA: &[u8; 445542] = include_bytes!("../data/khmerdict.dict");
+    const LAO_DATA: &[u8; 162620] = include_bytes!("../data/laodict.dict");
+    const CJ_DATA: &[u8; 2003566] = include_bytes!("../data/cjdict.dict");
 
     #[test]
-    fn iter_test() {
-        const KHMER_DATA: &[u8; 445542] = include_bytes!("../data/khmerdict.dict");
+    fn iter_bytes_test() {
         const KM_STR: [u16; 27] = [
             0x1797, 0x17b6, 0x179f, 0x17b6, 0x1781, 0x17d2, 0x1798, 0x17c2, 0x179a, 0x1797, 0x17b6,
             0x179f, 0x17b6, 0x1781, 0x17d2, 0x1798, 0x17c2, 0x179a, 0x1797, 0x17b6, 0x179f, 0x17b6,
@@ -134,7 +137,6 @@ mod tests {
         assert_eq!(iterator.next(), Some(18));
         assert_eq!(iterator.next(), Some(27));
 
-        const LAO_DATA: &[u8; 162620] = include_bytes!("../data/laodict.dict");
         const LO_STR: [u16; 21] = [
             0x0e9e, 0x0eb2, 0x0eaa, 0x0eb2, 0x0ea5, 0x0eb2, 0x0ea7, 0x0e9e, 0x0eb2, 0x0eaa, 0x0eb2,
             0x0ea5, 0x0eb2, 0x0ea7, 0x0e9e, 0x0eb2, 0x0eaa, 0x0eb2, 0x0ea5, 0x0eb2, 0x0ea7,
@@ -146,5 +148,15 @@ mod tests {
         assert_eq!(iterator.next(), Some(14));
         assert_eq!(iterator.next(), Some(18));
         assert_eq!(iterator.next(), Some(21));
+    }
+
+    #[test]
+    fn iter_uchar_test() {
+        const J_STR: [u16; 21] = [
+            0x0e9e, 0x0eb2, 0x0eaa, 0x0eb2, 0x0ea5, 0x0eb2, 0x0ea7, 0x0e9e, 0x0eb2, 0x0eaa, 0x0eb2,
+            0x0ea5, 0x0eb2, 0x0ea7, 0x0e9e, 0x0eb2, 0x0eaa, 0x0eb2, 0x0ea5, 0x0eb2, 0x0ea7,
+        ];
+        UCharsTrie::new(unsafe { *(CJ_DATA.as_ptr() as *const &[u16]) }, 0x90 + 0x20);
+        //let mut iterator = DictionaryIterator::new(CJ_DATA, &J_STR);
     }
 }

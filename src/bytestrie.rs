@@ -56,7 +56,7 @@ fn skip_value(pos: usize, lead_byte: u8) -> usize {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct BytesTrie<'a> {
     bytes_: &'a [u8],
     pos_: Option<usize>,
