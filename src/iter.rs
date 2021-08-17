@@ -1,7 +1,6 @@
 use crate::bytestrie::*;
 use crate::trie::*;
 use crate::ucharstrie::*;
-use std::mem;
 
 const TRIE_TYPE_BYTES: u32 = 0;
 const TRIE_TYPE_UCHARS: u32 = 1;
@@ -26,10 +25,11 @@ struct TrieHeader {
 
 #[derive(Clone)]
 pub struct DictionaryIterator<'a> {
-    trie: BytesTrie<'a>,
+    trie: Box<BytesTrie>,
     iter: &'a [u16],
     front_offset: usize,
     transform: u32,
+    dictionary: &'a [u8],
 }
 
 impl<'a> Iterator for DictionaryIterator<'a> {
@@ -49,12 +49,14 @@ impl<'a> Iterator for DictionaryIterator<'a> {
                 return Some(self.front_offset);
             }
             let result = match i {
-                0 => self
-                    .trie
-                    .first(self.transform(self.iter[i + self.front_offset])),
-                _ => self
-                    .trie
-                    .next(self.transform(self.iter[i + self.front_offset])),
+                0 => self.trie.first(
+                    self.dictionary,
+                    self.transform(self.iter[i + self.front_offset]),
+                ),
+                _ => self.trie.next(
+                    self.dictionary,
+                    self.transform(self.iter[i + self.front_offset]),
+                ),
             };
             if result == TrieResult::FinalValue {
                 self.front_offset += i + 1;
@@ -81,17 +83,18 @@ impl<'a> Iterator for DictionaryIterator<'a> {
 
 impl<'a> DictionaryIterator<'a> {
     pub fn new(dictionary: &'a [u8], input: &'a [u16]) -> Self {
-        if dictionary.len() < std::mem::size_of::<TrieHeader>() {
+        if dictionary.len() < core::mem::size_of::<TrieHeader>() {
             panic!("too small data");
         }
         let header = unsafe { &*(dictionary as *const [u8] as *const TrieHeader) };
         let trie_type = header.trie_type & TRIE_TYPE_MASK;
         match trie_type {
             TRIE_TYPE_BYTES => Self {
-                trie: BytesTrie::new(dictionary, 0x90 + header.trie_offset as usize),
+                trie: Box::new(BytesTrie::new(0x90 + header.trie_offset as usize)),
                 iter: input,
                 front_offset: 0,
                 transform: header.transform,
+                dictionary: dictionary,
             },
             TRIE_TYPE_UCHARS => panic!("not supported"),
             _ => panic!("unknown type"),

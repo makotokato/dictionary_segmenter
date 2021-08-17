@@ -57,28 +57,27 @@ fn skip_value(pos: usize, lead_byte: u8) -> usize {
 }
 
 #[derive(Clone, Copy)]
-pub struct BytesTrie<'a> {
-    bytes_: &'a [u8],
+pub struct BytesTrie {
     pos_: Option<usize>,
     root_: usize,
     remaining_match_length_: Option<usize>,
 }
 
-impl<'a> Trie for BytesTrie<'a> {
+impl Trie for BytesTrie {
     // Traverses the trie from the initial state for this input char.
     // Equivalent to reset() then next(inUnit)
-    fn first(&mut self, in_byte: i32) -> TrieResult {
-        let mut in_byte = in_byte;
+    fn first(&mut self, trie_data: &[u8], c: i32) -> TrieResult {
+        let mut in_byte = c;
         self.remaining_match_length_ = None;
         if in_byte < 0 {
             in_byte += 0x100;
         }
-        self.next_impl(self.root_, in_byte as u8)
+        self.next_impl(trie_data, self.root_, c as u8)
     }
 
     // Traverses the trie from the current state for this input char.
-    fn next(&mut self, in_byte: i32) -> TrieResult {
-        let mut in_byte = in_byte;
+    fn next(&mut self, trie_data: &[u8], c: i32) -> TrieResult {
+        let mut in_byte = c;
         if self.pos_.is_none() {
             return TrieResult::NoMatch;
         }
@@ -89,12 +88,12 @@ impl<'a> Trie for BytesTrie<'a> {
         let mut pos = self.pos_.unwrap();
         if let Some(length) = self.remaining_match_length_ {
             // Remaining part of a linear-match node
-            if in_byte == self.bytes_[pos] {
+            if in_byte == trie_data[pos] {
                 pos += 1;
                 self.pos_ = Some(pos);
                 if length == 0 {
                     self.remaining_match_length_ = None;
-                    let node = self.bytes_[pos];
+                    let node = trie_data[pos];
                     if node >= MIN_VALUE_LEAD {
                         return BytesTrie::value_result(node);
                     }
@@ -106,26 +105,31 @@ impl<'a> Trie for BytesTrie<'a> {
             self.stop();
             TrieResult::NoMatch
         } else {
-            self.next_impl(pos, in_byte)
+            self.next_impl(trie_data, pos, in_byte)
         }
     }
 }
 
-impl<'a> BytesTrie<'a> {
-    pub fn new(trie: &'a [u8], offset: usize) -> Self {
+impl BytesTrie {
+    pub fn new(offset: usize) -> Self {
         Self {
-            bytes_: trie,
             pos_: Some(offset),
             root_: offset,
             remaining_match_length_: None,
         }
     }
 
-    fn branch_next(&mut self, pos: usize, length: usize, in_unit: u8) -> TrieResult {
+    fn branch_next(
+        &mut self,
+        trie_data: &[u8],
+        pos: usize,
+        length: usize,
+        in_unit: u8,
+    ) -> TrieResult {
         let mut pos = pos;
         let mut length = length;
         if length == 0 {
-            length = self.bytes_[pos] as usize;
+            length = trie_data[pos] as usize;
             pos += 1;
         }
         length += 1;
@@ -133,21 +137,21 @@ impl<'a> BytesTrie<'a> {
         // The length of the branch is the number of units to select from.
         // The data structure encodes a binary search.
         while length > MAX_BRANCH_LINEAR_SUB_NODE_LENGTH {
-            if in_unit < self.bytes_[pos] {
+            if in_unit < trie_data[pos] {
                 length >>= 1;
-                pos = self.jump_by_delta(pos + 1);
+                pos = self.jump_by_delta(trie_data, pos + 1);
             } else {
                 length = length - (length >> 1);
-                pos = self.skip_delta(pos + 1);
+                pos = self.skip_delta(trie_data, pos + 1);
             }
         }
         // Drop down to linear search for the last few bytes.
         // length>=2 because the loop body above sees length>kMaxBranchLinearSubNodeLength>=3
         // and divides length by 2.
         loop {
-            if in_unit == self.bytes_[pos] {
+            if in_unit == trie_data[pos] {
                 pos += 1;
-                let mut node = self.bytes_[pos];
+                let mut node = trie_data[pos];
                 assert!(node >= MIN_VALUE_LEAD);
                 if node & VALUE_IS_FINAL != 0 {
                     // Leave the final value for getValue() to read.
@@ -162,26 +166,26 @@ impl<'a> BytesTrie<'a> {
                     pos += (node - MIN_ONE_BYTE_VALUE_LEAD) as usize;
                 } else if node < MIN_THREE_BYTE_VALUE_LEAD {
                     pos += (((node - MIN_TWO_BYTE_VALUE_LEAD) as u32) << 8) as usize
-                        | self.bytes_[pos] as usize;
+                        | trie_data[pos] as usize;
                     pos += 1;
                 } else if node < FOUR_BYTE_VALUE_LEAD {
                     pos += (((node - MIN_THREE_BYTE_VALUE_LEAD) as usize) << 16)
-                        | (self.bytes_[pos] as usize) << 8
-                        | self.bytes_[pos + 1] as usize;
+                        | (trie_data[pos] as usize) << 8
+                        | trie_data[pos + 1] as usize;
                     pos += 2;
                 } else if node == FOUR_BYTE_VALUE_LEAD {
-                    pos += (self.bytes_[pos] as usize) << 16
-                        | (self.bytes_[pos + 1] as usize) << 8
-                        | self.bytes_[pos + 2] as usize;
+                    pos += (trie_data[pos] as usize) << 16
+                        | (trie_data[pos + 1] as usize) << 8
+                        | trie_data[pos + 2] as usize;
                     pos += 3;
                 } else {
-                    pos += (self.bytes_[pos] as usize) << 24
-                        | (self.bytes_[pos + 1] as usize) << 16
-                        | (self.bytes_[pos + 2] as usize) << 8
-                        | self.bytes_[pos + 3] as usize;
+                    pos += (trie_data[pos] as usize) << 24
+                        | (trie_data[pos + 1] as usize) << 16
+                        | (trie_data[pos + 2] as usize) << 8
+                        | trie_data[pos + 3] as usize;
                     pos += 4;
                 }
-                node = self.bytes_[pos];
+                node = trie_data[pos];
                 self.pos_ = Some(pos);
 
                 if node >= MIN_VALUE_LEAD {
@@ -190,16 +194,16 @@ impl<'a> BytesTrie<'a> {
                 return TrieResult::NoValue;
             }
             length -= 1;
-            pos = self.skip_value(pos + 1);
+            pos = self.skip_value(trie_data, pos + 1);
             if length <= 1 {
                 break;
             }
         }
 
-        if in_unit == self.bytes_[pos] {
+        if in_unit == trie_data[pos] {
             pos += 1;
             self.pos_ = Some(pos);
-            let node = self.bytes_[pos];
+            let node = trie_data[pos];
             if node >= MIN_VALUE_LEAD {
                 return BytesTrie::value_result(node);
             }
@@ -210,22 +214,22 @@ impl<'a> BytesTrie<'a> {
         }
     }
 
-    fn next_impl(&mut self, pos: usize, in_unit: u8) -> TrieResult {
+    fn next_impl(&mut self, trie_data: &[u8], pos: usize, in_unit: u8) -> TrieResult {
         let mut pos = pos;
         loop {
-            let mut node = self.bytes_[pos];
+            let mut node = trie_data[pos];
             pos += 1;
             if node < MIN_LINEAR_MATCH {
-                return self.branch_next(pos, node as usize, in_unit);
+                return self.branch_next(trie_data, pos, node as usize, in_unit);
             } else if node < MIN_VALUE_LEAD {
                 // Match the first of length+1 units.
                 let length = node - MIN_LINEAR_MATCH;
-                if in_unit == self.bytes_[pos] {
+                if in_unit == trie_data[pos] {
                     pos += 1;
                     if length == 0 {
                         self.remaining_match_length_ = None;
                         self.pos_ = Some(pos);
-                        node = self.bytes_[pos];
+                        node = trie_data[pos];
                         if node >= MIN_VALUE_LEAD {
                             return BytesTrie::value_result(node);
                         }
@@ -243,7 +247,7 @@ impl<'a> BytesTrie<'a> {
             } else {
                 // Skip intermediate value.
                 pos = skip_value(pos, node);
-                assert!(self.bytes_[pos] < MIN_VALUE_LEAD);
+                assert!(trie_data[pos] < MIN_VALUE_LEAD);
             }
         }
         self.stop();
@@ -254,41 +258,41 @@ impl<'a> BytesTrie<'a> {
         self.pos_ = None;
     }
 
-    fn jump_by_delta(&self, pos: usize) -> usize {
-        let delta = self.bytes_[pos];
+    fn jump_by_delta(&self, trie_data: &[u8], pos: usize) -> usize {
+        let delta = trie_data[pos];
         if delta < MIN_TWO_BYTE_DELTA_LEAD {
             // nothing to do
             pos + 1 + delta as usize
         } else if delta < MIN_THREE_BYTE_DELTA_LEAD {
             let delta =
-                (((delta - MIN_TWO_BYTE_DELTA_LEAD) as usize) << 8) | self.bytes_[pos + 1] as usize;
+                (((delta - MIN_TWO_BYTE_DELTA_LEAD) as usize) << 8) | trie_data[pos + 1] as usize;
             pos + delta + 2
         } else if delta < FOUR_BYTE_DELTA_LEAD {
             let delta = (((delta - MIN_THREE_BYTE_DELTA_LEAD) as usize) << 16)
-                | ((self.bytes_[pos + 1] as usize) << 8)
-                | self.bytes_[pos + 2] as usize;
+                | ((trie_data[pos + 1] as usize) << 8)
+                | trie_data[pos + 2] as usize;
             pos + delta + 3
         } else if delta == FOUR_BYTE_DELTA_LEAD {
-            let delta = ((self.bytes_[pos + 1] as usize) << 16)
-                | ((self.bytes_[pos + 2] as usize) << 8)
-                | (self.bytes_[pos + 3] as usize);
+            let delta = ((trie_data[pos + 1] as usize) << 16)
+                | ((trie_data[pos + 2] as usize) << 8)
+                | (trie_data[pos + 3] as usize);
             pos + delta + 4
         } else {
-            let delta = ((self.bytes_[pos + 1] as usize) << 24)
-                | ((self.bytes_[pos + 2] as usize) << 16)
-                | ((self.bytes_[pos + 3] as usize) << 8)
-                | (self.bytes_[pos + 4] as usize);
+            let delta = ((trie_data[pos + 1] as usize) << 24)
+                | ((trie_data[pos + 2] as usize) << 16)
+                | ((trie_data[pos + 3] as usize) << 8)
+                | (trie_data[pos + 4] as usize);
             pos + delta + 5
         }
     }
 
-    fn skip_value(&self, pos: usize) -> usize {
-        let lead_byte = self.bytes_[pos];
-        skip_value(pos + 1, lead_byte)
+    fn skip_value(&self, trie_data: &[u8], pos: usize) -> usize {
+        let lead = trie_data[pos];
+        skip_value(pos + 1, lead)
     }
 
-    fn skip_delta(&self, pos: usize) -> usize {
-        let delta = self.bytes_[pos];
+    fn skip_delta(&self, trie_data: &[u8], pos: usize) -> usize {
+        let delta = trie_data[pos];
         if delta < MIN_TWO_BYTE_DELTA_LEAD {
             pos + 1
         } else if delta < MIN_THREE_BYTE_DELTA_LEAD {
