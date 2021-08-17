@@ -162,6 +162,9 @@ mod tests {
             0x713c, 0x8089, 0x5b9a, 0x98df, 0x3092, 0x98df, 0x3079, 0x308b,
         ];
         let mut iterator = DictionaryIterator::new(CJ_DATA, &J_STR);
+        assert_eq!(iterator.next(), Some(2));
         assert_eq!(iterator.next(), Some(4));
+        assert_eq!(iterator.next(), Some(5));
+        assert_eq!(iterator.next(), Some(8));
     }
 }

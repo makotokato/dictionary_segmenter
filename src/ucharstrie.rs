@@ -57,7 +57,6 @@ impl Trie for UCharsTrie {
     // Traverses the trie from the initial state for this input char.
     // Equivalent to reset() then next(inUnit)
     fn first(&mut self, trie_data: &[u8], c: i32) -> TrieResult {
-        println!("first: {}", self.pos_.unwrap() - self.root_);
         let uchars = unsafe { &*(trie_data as *const [u8] as *const [u16]) };
         self.remaining_match_length_ = None;
         self.next_impl(uchars, self.root_, c as u16)
@@ -65,7 +64,6 @@ impl Trie for UCharsTrie {
 
     // Traverses the trie from the current state for this input char.
     fn next(&mut self, trie_data: &[u8], c: i32) -> TrieResult {
-        println!("next: {}", self.pos_.unwrap() - self.root_);
         let uchars = unsafe { &*(trie_data as *const [u8] as *const [u16]) };
         if self.pos_.is_none() {
             return TrieResult::NoMatch;
@@ -120,7 +118,6 @@ impl UCharsTrie {
         length: usize,
         in_unit: u16,
     ) -> TrieResult {
-        println!("branch_next: pos={}, length={}, in_unit={:x}", pos - self.root_, length, in_unit);
         let mut pos = pos;
         let mut length = length;
         if length == 0 {
@@ -140,7 +137,6 @@ impl UCharsTrie {
                 pos = self.skip_delta(uchars, pos + 1);
             }
         }
-        println!("branch_next: new pos={}, new length={}", pos - self.root_, length);
         // Drop down to linear search for the last few bytes.
         // length>=2 because the loop body above sees length>kMaxBranchLinearSubNodeLength>=3
         // and divides length by 2.
@@ -196,7 +192,6 @@ impl UCharsTrie {
     }
 
     fn next_impl(&mut self, uchars: &[u16], pos: usize, in_unit: u16) -> TrieResult {
-        println!("next_impl: pos={}", pos - self.root_);
         let mut node = uchars[pos];
         let mut pos = pos + 1;
         loop {
@@ -256,13 +251,13 @@ impl UCharsTrie {
 
     fn skip_value(&self, uchars: &[u16], pos: usize) -> usize {
         let lead_byte = uchars[pos];
-        skip_value(pos + 1, lead_byte)
+        skip_value(pos + 1, lead_byte & 0x7fff)
     }
 
     fn skip_delta(&self, uchars: &[u16], pos: usize) -> usize {
         let delta = uchars[pos];
         if delta < MIN_TWO_UNIT_DELTA_LEAD {
-            pos + delta as usize + 1
+            pos + 1
         } else if delta == THREE_UNIT_DELTA_LEAD {
             pos + 3
         } else {
