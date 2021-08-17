@@ -45,16 +45,14 @@ const MAX_THREE_BYTE_DELTA: u32 =
 
 fn skip_value(pos: usize, lead_byte: u8) -> usize {
     assert!(lead_byte >= MIN_VALUE_LEAD);
-    if lead_byte >= (MIN_TWO_BYTE_VALUE_LEAD << 1) {
-        if lead_byte < (MIN_THREE_BYTE_VALUE_LEAD << 1) {
-            pos + 1
-        } else if lead_byte < (FOUR_BYTE_VALUE_LEAD << 1) {
-            pos + 2
-        } else {
-            pos + 3 + ((lead_byte as usize >> 1) & 1)
-        }
-    } else {
+    if lead_byte < (MIN_TWO_BYTE_VALUE_LEAD << 1) {
         pos
+    } else if lead_byte < (MIN_THREE_BYTE_VALUE_LEAD << 1) {
+        pos + 1
+    } else if lead_byte < (FOUR_BYTE_VALUE_LEAD << 1) {
+        pos + 2
+    } else {
+        pos + 3 + ((lead_byte >> 1) & 1) as usize
     }
 }
 
@@ -66,29 +64,28 @@ pub struct BytesTrie<'a> {
     remaining_match_length_: Option<usize>,
 }
 
-impl<'a> BytesTrie<'a> {
-    pub fn new(trie: &'a [u8], offset: usize) -> Self {
-        Self {
-            bytes_: trie,
-            pos_: Some(offset),
-            root_: offset,
-            remaining_match_length_: None,
-        }
-    }
-
+impl<'a> Trie for BytesTrie<'a> {
     // Traverses the trie from the initial state for this input char.
     // Equivalent to reset() then next(inUnit)
-    pub fn first(&mut self, in_byte: i32) -> TrieResult {
+    fn first(&mut self, in_byte: i32) -> TrieResult {
+        let mut in_byte = in_byte;
         self.remaining_match_length_ = None;
+        if in_byte < 0 {
+            in_byte += 0x100;
+        }
         self.next_impl(self.root_, in_byte as u8)
     }
 
     // Traverses the trie from the current state for this input char.
-    pub fn next(&mut self, in_byte: i32) -> TrieResult {
-        let mut in_byte = in_byte as u8;
+    fn next(&mut self, in_byte: i32) -> TrieResult {
+        let mut in_byte = in_byte;
         if self.pos_.is_none() {
             return TrieResult::NoMatch;
         }
+        if in_byte < 0 {
+            in_byte += 0x100;
+        }
+        let in_byte = in_byte as u8;
         let mut pos = self.pos_.unwrap();
         if let Some(length) = self.remaining_match_length_ {
             // Remaining part of a linear-match node
@@ -107,10 +104,20 @@ impl<'a> BytesTrie<'a> {
                 return TrieResult::NoValue;
             }
             self.stop();
-            // no match
             TrieResult::NoMatch
         } else {
             self.next_impl(pos, in_byte)
+        }
+    }
+}
+
+impl<'a> BytesTrie<'a> {
+    pub fn new(trie: &'a [u8], offset: usize) -> Self {
+        Self {
+            bytes_: trie,
+            pos_: Some(offset),
+            root_: offset,
+            remaining_match_length_: None,
         }
     }
 
@@ -282,16 +289,14 @@ impl<'a> BytesTrie<'a> {
 
     fn skip_delta(&self, pos: usize) -> usize {
         let delta = self.bytes_[pos];
-        if delta >= MIN_TWO_BYTE_DELTA_LEAD {
-            if delta < MIN_THREE_BYTE_DELTA_LEAD {
-                pos + 2
-            } else if delta < FOUR_BYTE_DELTA_LEAD {
-                pos + 3
-            } else {
-                pos + 4 + ((delta & 1) as usize)
-            }
-        } else {
+        if delta < MIN_TWO_BYTE_DELTA_LEAD {
             pos + 1
+        } else if delta < MIN_THREE_BYTE_DELTA_LEAD {
+            pos + 2
+        } else if delta < FOUR_BYTE_DELTA_LEAD {
+            pos + 3
+        } else {
+            pos + 4 + ((delta & 1) as usize)
         }
     }
 
