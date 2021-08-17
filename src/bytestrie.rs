@@ -11,7 +11,12 @@ const MAX_BRANCH_LINEAR_SUB_NODE_LENGTH: usize = 5;
 const MIN_LINEAR_MATCH: u8 = 0x10;
 const MAX_LINEAR_MATCH_LENGTH: u8 = 0x10;
 
-const MIN_VALUE_LEAD: u8 = 0x20;
+// 20..ff: Variable-length value node.
+// If odd, the value is final. (Otherwise, intermediate value or jump delta.)
+// Then shift-right by 1 bit.
+// The remaining lead byte value indicates the number of following bytes (0..4)
+// and contains the value's top bits.
+const MIN_VALUE_LEAD: u8 = MIN_LINEAR_MATCH + MAX_LINEAR_MATCH_LENGTH; // 0x20
 
 // A final-value node has bit 0 set.
 const VALUE_IS_FINAL: u8 = 1;
@@ -26,22 +31,11 @@ const MIN_THREE_BYTE_VALUE_LEAD: u8 =
     (MIN_TWO_BYTE_VALUE_LEAD + (MAX_TWO_BYTE_VALUE >> 8) as u8) + 1; // 0x6c
 const FOUR_BYTE_VALUE_LEAD: u8 = 0x7e;
 
-// A little more than Unicode code points. (0x11ffff)
-const MAX_THREE_BYTE_VALUE: u32 =
-    (((FOUR_BYTE_VALUE_LEAD - MIN_THREE_BYTE_VALUE_LEAD) as u32) << 16) - 1;
-
-const FIVE_BYTE_VALUE_LEAD: u8 = 0x7f;
-
 // Compact delta integers.
 const MAX_ONE_BYTE_DELTA: u8 = 0xbf;
 const MIN_TWO_BYTE_DELTA_LEAD: u8 = MAX_ONE_BYTE_DELTA + 1; // 0xc0
 const MIN_THREE_BYTE_DELTA_LEAD: u8 = 0xf0;
 const FOUR_BYTE_DELTA_LEAD: u8 = 0xfe;
-const FIVE_BYTE_DELTA_LEAD: u8 = 0xff;
-const MAX_TWO_BYTE_DELTA: u32 =
-    (((MIN_THREE_BYTE_DELTA_LEAD - MIN_TWO_BYTE_DELTA_LEAD) as u32) << 8) - 1; // 0x2fff
-const MAX_THREE_BYTE_DELTA: u32 =
-    (((FOUR_BYTE_DELTA_LEAD - MIN_THREE_BYTE_DELTA_LEAD) as u32) << 16) - 1; // 0xdffff
 
 fn skip_value(pos: usize, lead_byte: u8) -> usize {
     assert!(lead_byte >= MIN_VALUE_LEAD);
@@ -72,7 +66,7 @@ impl Trie for BytesTrie {
         if in_byte < 0 {
             in_byte += 0x100;
         }
-        self.next_impl(trie_data, self.root_, c as u8)
+        self.next_impl(trie_data, self.root_, in_byte as u8)
     }
 
     // Traverses the trie from the current state for this input char.

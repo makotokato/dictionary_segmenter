@@ -25,7 +25,7 @@ pub trait Trie {
     fn box_clone(&self) -> Box<dyn Trie>;
 }
 
-impl Clone for Box<Trie> {
+impl Clone for Box<dyn Trie> {
     fn clone(&self) -> Box<dyn Trie> {
         self.box_clone()
     }
