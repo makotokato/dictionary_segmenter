@@ -1,8 +1,8 @@
 #[derive(Clone, Copy, PartialEq)]
 pub enum TrieResult {
     // The input unit(s) did not continue a matching string.
-    // Once current()/next() return USTRINGTRIE_NO_MATCH,
-    // all further calls to current()/next() will also return USTRINGTRIE_NO_MATCH,
+    // Once current()/next() return TrieResult::NoMatch,
+    // all further calls to current()/next() will also return TrieResult::NoMatch,
     // until the trie is reset to its original state or to a saved state.
     NoMatch,
     // The input unit(s) continued a matching string
@@ -11,12 +11,10 @@ pub enum TrieResult {
     NoValue,
     // The input unit(s) continued a matching string
     // and there is a value for the string so far.
-    // This value will be returned by getValue().
     // No further input byte/unit can continue a matching string.
     FinalValue,
     // The input unit(s) continued a matching string
     // and there is a value for the string so far.
-    // This value will be returned by getValue().
     // Another input byte/unit can continue a matching string.
     Intermediate,
 }
@@ -29,6 +27,6 @@ pub trait Trie {
 
 impl Clone for Box<Trie> {
     fn clone(&self) -> Box<dyn Trie> {
-      self.box_clone()
+        self.box_clone()
     }
 }
